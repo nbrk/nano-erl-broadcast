@@ -2,6 +2,8 @@ module Control.Concurrent.NanoErl.Broadcast
   ( GroupProcess
   , GroupRef
   , spawnGroup
+  , addToGroup
+  , mergeGroups
   , (!*)
   , broadcastExcept
   ) where
@@ -34,6 +36,15 @@ addToGroup :: GroupRef message -> [Pid message] -> IO ()
 addToGroup gref newpids = do
   pids <- readIORef gref
   writeIORef gref $ nub $ pids ++ newpids
+
+
+-- | Merge groups: they become identical with their sum
+mergeGroups :: [GroupRef message] -> IO ()
+mergeGroups grefs = do
+  allpids <- forM grefs readIORef
+  let allpids' = (nub . concat) allpids
+  forM_ grefs $ \r -> writeIORef r allpids'
+  return ()
 
 
 -- | Broadcast a message to everyone in the group (including ourselves)
