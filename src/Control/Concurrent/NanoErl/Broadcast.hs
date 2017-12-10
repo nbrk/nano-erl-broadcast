@@ -1,5 +1,6 @@
 module Control.Concurrent.NanoErl.Broadcast
   ( GroupProcess
+  , GroupRef
   , spawnGroup
   , (!*)
   , broadcastExcept
