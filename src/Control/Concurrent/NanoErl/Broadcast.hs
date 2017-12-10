@@ -9,7 +9,7 @@ module Control.Concurrent.NanoErl.Broadcast
 import           Control.Concurrent.NanoErl
 import           Control.Monad
 import           Data.IORef
-import           Data.List                  ((\\))
+import           Data.List                  (nub, (\\))
 
 
 -- | A ref holding all processes in the group
@@ -27,6 +27,13 @@ spawnGroup as = do
   pids <- mapM (\a -> spawn (a gref)) as
   writeIORef gref pids
   return gref
+
+
+-- | Add some pids to the existing group
+addToGroup :: GroupRef message -> [Pid message] -> IO ()
+addToGroup gref newpids = do
+  pids <- readIORef gref
+  writeIORef gref $ nub $ pids ++ newpids
 
 
 -- | Broadcast a message to everyone in the group (including ourselves)
