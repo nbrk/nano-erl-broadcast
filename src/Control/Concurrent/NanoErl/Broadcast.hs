@@ -26,16 +26,28 @@ spawnGroup :: [GroupProcess message] -> IO (GroupRef message)
 spawnGroup as = do
   gref <- newIORef [] :: IO (GroupRef message)
   -- XXX it's not safe to just start all the actors with an empty group
-  pids <- mapM (\a -> spawn (a gref)) as
-  writeIORef gref pids
+  foldM_ (\pids a -> do
+            pid <- spawn (a gref)
+            atomicModifyIORef gref (\inpids -> (pid:inpids, ()))
+            return (pid:pids)
+        )
+    []
+    as
   return gref
+
+
+-- | Kill all actors in the group
+killGroup :: GroupRef message -> IO ()
+killGroup gref = do
+  pids <- readIORef gref
+  mapM_ kill pids
 
 
 -- | Add some pids to the existing group
 addToGroup :: GroupRef message -> [Pid message] -> IO ()
 addToGroup gref newpids = do
   pids <- readIORef gref
-  writeIORef gref $ nub $ pids ++ newpids
+  atomicModifyIORef gref (\pids -> (nub (pids ++ newpids), ()))
 
 
 -- | Merge groups: they become identical with their sum
@@ -43,7 +55,8 @@ mergeGroups :: [GroupRef message] -> IO ()
 mergeGroups grefs = do
   allpids <- forM grefs readIORef
   let allpids' = (nub . concat) allpids
-  forM_ grefs $ \r -> writeIORef r allpids'
+  forM_ grefs $
+    \r -> atomicModifyIORef r (const (allpids', ()))
   return ()
 
 
