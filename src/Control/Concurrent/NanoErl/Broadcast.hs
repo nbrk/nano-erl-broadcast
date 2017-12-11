@@ -22,18 +22,17 @@ type GroupProcess message = GroupRef message -> Process message
 
 
 -- | Spawn a group of actors and return the group's ref (as passed to the actors in the group)
-spawnGroup :: [GroupProcess message] -> IO (GroupRef message)
+spawnGroup :: [GroupProcess message] -> IO (GroupRef message, [Pid message])
 spawnGroup as = do
   gref <- newIORef [] :: IO (GroupRef message)
   -- XXX it's not safe to just start all the actors with an empty group
-  foldM_ (\pids a -> do
+  pids <- foldM (\pids a -> do
             pid <- spawn (a gref)
             atomicModifyIORef gref (\inpids -> (pid:inpids, ()))
-            return (pid:pids)
-        )
-    []
-    as
-  return gref
+            return (pid:pids))
+          []
+          as
+  return (gref, pids)
 
 
 -- | Kill all actors in the group
